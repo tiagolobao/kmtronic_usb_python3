@@ -1,5 +1,6 @@
 The python-usbrelay package allows one to control a usb relay bank. 
 Copyright (C) 2012 David Schryer
+Copyright (C) 2017 Cedric Paillet
 
 All the code in this project is free software: you can redistribute it
 and/or modify it under the terms of the GNU General Public License as
