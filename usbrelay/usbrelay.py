@@ -15,6 +15,7 @@ __all__ = __autodoc__
 import os
 import time
 import serial
+import serial.tools.list_ports
 import subprocess
 
 from struct import pack, unpack, calcsize
@@ -28,49 +29,22 @@ class Relay(object):
 
     def __init__(self, relay_type):
         if relay_type == 'KMTronic_8':
-            usb_conn = 'ttyACM'
             ch = range(1,9)
         else:
             msg = 'This relay_type is not available.'
             raise NotImplementedError(msg, relay_type)
 
-        self.tty_port = self._get_tty_port(usb_conn)
+        self.tty_port = list(serial.tools.list_ports.grep("04d8:f55e"))[0][0]
         self.channels = ch
         self.relay_type = relay_type
         self.states = [0, 1, 'on', 'off']
         
-    def _get_tty_port(self, usb_conn):
-        '''
-        Returns the tty device name for the usbrelay.
-        '''
-
-        cmd = 'lshal | grep serial.device | grep {0}'.format(usb_conn)
-
-        cmd_proc = subprocess.Popen(cmd,
-                                    shell=True,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    env=os.environ)
-        cmd_out, cmd_err = cmd_proc.communicate()
-
-        out_lines = cmd_out.split('\n')[:-1]
-        if len(out_lines) != 1:
-            msg = 'More than one usb_relay was found.'
-            raise UserWarning(msg, (usb_conn, out_lines))
-
-        out_string = cmd_out.split('/dev/')
-        if len(out_string) != 2:
-            msg = "No USB device {0} was found ({1}).  Look at: {2}".format(usb_conn, cmd)
-            raise UserWarning(msg, (cmd_out))
-
-        return out_string[1].split("'")[0]
-
 
     def _make_serial_object(self, tty_port):
         '''
         Makes a serial object that can be used for talking with a usbrelay.
         '''
-        return serial.Serial(port="/dev/{0}".format(tty_port),
+        return serial.Serial(port=tty_port,
                              baudrate=9600,
                              parity=serial.PARITY_NONE,
                              stopbits=serial.STOPBITS_ONE,
@@ -83,7 +57,7 @@ class Relay(object):
         """
         so = self._make_serial_object(self.tty_port)
         print(so.getPort() + ' : ' + `so.getSettingsDict()`)
-        
+
     def set(self, channel=None, state=None, verbose=False):
         """Sets the state of a given channel.
 
@@ -128,7 +102,8 @@ class Relay(object):
             print(msg.format(channel, rt, stp, int_msg, byte_msg))
 
         so = self._make_serial_object(self.tty_port)
-        so.open()
+        if not so.isOpen():
+		so.open()
         so.write(packet)
 
 if __name__ == '__main__':
@@ -139,7 +114,7 @@ if __name__ == '__main__':
     for ch in r.channels:
         cmds.append((ch, 1))
         cmds.append((ch, 0))
-
-    for cmd in cmds:
-        r.set(*cmd, verbose=True)
-        time.sleep(0.2)
+    while True:
+    	for cmd in cmds:
+        	r.set(*cmd, verbose=True)
+        	time.sleep(2)
