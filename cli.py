@@ -91,6 +91,10 @@ def make_argument_parser():
                      dest="relay_type", default='KMTronic_8', metavar=ST, choices=['KMTronic_8'],
                      help='Sets the relay type to be used. {0} {1}'.format(d, c))
 
+    spg.add_argument("-p", "--port", 
+                     dest="port", default='None', metavar=ST,
+                     help='Sets the serial Port to be used [mandatory]. {0}'.format(d))
+
     cpg.add_argument("-t", "--time-sequence", nargs='+', type=time_command,
                      dest="time_sequence", default=None, metavar=FL, 
                      help='Sequence of times to apply commands.  Must be in ascending order. The "s" character can be used to apply the same time to the next command.')
@@ -104,10 +108,11 @@ def make_argument_parser():
     
 def process_arguments(args):
 
-    if args.output_settings:
-        r = Relay(args.relay_type)
+    if args.port == 'None':
+        raise Exception("No serial port selected")
+    else:
+        r = Relay(args.relay_type, args.port)
         r.output_parameters()
-        exit()
 
     if not args.command_sequence:
         msg = 'A command sequence must be specified (C1,S1 C2,S2 C3,S3).'
@@ -143,7 +148,7 @@ def process_arguments(args):
         except TypeError:
             pass
             
-        r = Relay(args.relay_type)
+        r = Relay(args.relay_type, args.port)
         r.set(*cmd, verbose=args.verbose)
         
 if __name__ == '__main__':

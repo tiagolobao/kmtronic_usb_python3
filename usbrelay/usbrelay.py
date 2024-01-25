@@ -12,13 +12,7 @@ __copyright__ = license_text
 __autodoc__ = ['Relay']
 __all__ = __autodoc__
 
-import os
-import time
 import serial
-import serial.tools.list_ports
-import subprocess
-
-from struct import pack, unpack, calcsize
             
 class Relay(object):
     """This is an object used to talk with a USB relay bank.
@@ -27,36 +21,30 @@ class Relay(object):
     to output the serial connection settings.
     """
 
-    def __init__(self, relay_type):
+    def __init__(self, relay_type, serialPort):
         if relay_type == 'KMTronic_8':
             ch = range(1,9)
         else:
             msg = 'This relay_type is not available.'
             raise NotImplementedError(msg, relay_type)
 
-        self.tty_port = list(serial.tools.list_ports.grep("04d8:f55e"))[0][0]
+        self.serialPort = serialPort
         self.channels = ch
         self.relay_type = relay_type
         self.states = [0, 1, 'on', 'off']
-        
-
-    def _make_serial_object(self, tty_port):
-        '''
-        Makes a serial object that can be used for talking with a usbrelay.
-        '''
-        return serial.Serial(port=tty_port,
-                             baudrate=9600,
-                             parity=serial.PARITY_NONE,
-                             stopbits=serial.STOPBITS_ONE,
-                             bytesize=serial.EIGHTBITS,
-                             xonxoff=True,
+        self.serialInstace = serial.Serial(
+            port=self.serialPort,
+            baudrate=9600,
+            parity=serial.PARITY_NONE,
+            stopbits=serial.STOPBITS_ONE,
+            bytesize=serial.EIGHTBITS,
+            xonxoff=True,
         )
 
     def output_parameters(self):
         """Outputs the parameters used to control the USB relay bank.
         """
-        so = self._make_serial_object(self.tty_port)
-        print(so.getPort() + ' : ' + `so.getSettingsDict()`)
+        print( '{0} : {1}'.format(self.serialInstace.port, self.serialInstace.getSettingsDict()) )
 
     def set(self, channel=None, state=None, verbose=False):
         """Sets the state of a given channel.
@@ -93,28 +81,15 @@ class Relay(object):
             state = 0
             stp = 'off'
             
-        int_msg = [255, channel, state]
-        byte_msg = map(chr, int_msg)
-        packet = pack('=ccc', *byte_msg)
+        packet = bytearray(3)
+        packet[0] = 0xFF
+        packet[1] = channel
+        packet[2] = state
 
         if verbose:
-            msg = 'Switching channel {0} of a {1} {2:3} by sending int:{3} = byte:{4}'
-            print(msg.format(channel, rt, stp, int_msg, byte_msg))
+            msg = 'Switching channel {0} of a {1} {2} by sending {3}'
+            print(msg.format(channel, rt, stp, packet))
 
-        so = self._make_serial_object(self.tty_port)
-        if not so.isOpen():
-		so.open()
-        so.write(packet)
-
-if __name__ == '__main__':
-
-    r = Relay('KMTronic_8')
-
-    cmds = []
-    for ch in r.channels:
-        cmds.append((ch, 1))
-        cmds.append((ch, 0))
-    while True:
-    	for cmd in cmds:
-        	r.set(*cmd, verbose=True)
-        	time.sleep(2)
+        if not self.serialInstace.isOpen():
+            self.serialInstace.open()
+        self.serialInstace.write(packet)

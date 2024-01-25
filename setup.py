@@ -4,7 +4,6 @@
 license_text = "(C) 2012 David Schryer GNU GPLv3 or later."
 __copyright__ = license_text
 
-import os
 import glob
 from distutils.core import setup
 
