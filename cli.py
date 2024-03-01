@@ -110,9 +110,6 @@ def process_arguments(args):
 
     if args.port == 'None':
         raise Exception("No serial port selected")
-    else:
-        r = Relay(args.relay_type, args.port)
-        r.output_parameters()
 
     if not args.command_sequence:
         msg = 'A command sequence must be specified (C1,S1 C2,S2 C3,S3).'
@@ -150,6 +147,9 @@ def process_arguments(args):
             
         r = Relay(args.relay_type, args.port)
         r.set(*cmd, verbose=args.verbose)
+
+        if args.verbose:
+            r.output_parameters()
         
 if __name__ == '__main__':
 
